@@ -1,4 +1,5 @@
-# onion.cards — Day 1 Setup
+git add README.md
+git commit -m "Merge remote README"# onion.cards — Day 1 Setup
 
 ## What's here
 Full repo skeleton matching the spec: FastAPI backend (auth, generate, upload/RAG,
