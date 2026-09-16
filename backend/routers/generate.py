@@ -4,13 +4,16 @@ import httpx
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from routers.auth import get_current_user
+from routers.billing import require_active_subscription
+from services.web_search import web_search
 from supabase_client import supabase
 
 router = APIRouter()
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-SYSTEM_PROMPT = """You generate study flashcards. Given a topic, return STRICT JSON only, no prose:
+SYSTEM_PROMPT = """You generate study flashcards. Given a topic (and optional
+web search context), return STRICT JSON only, no prose:
 {
   "overview": "2-3 sentence summary of the topic",
   "cards": [{"question": "...", "answer": "..."}, ...]
@@ -20,10 +23,20 @@ Generate 8-12 cards. Questions should be specific and testable, answers concise.
 
 class GenerateRequest(BaseModel):
     topic: str
+    use_web_search: bool = False
 
 
 @router.post("")
 async def generate_cards(req: GenerateRequest, user=Depends(get_current_user)):
+    web_context = ""
+    if req.use_web_search:
+        # Premium-gated: require an active subscription for this path only
+        require_active_subscription(user=user)
+        results = await web_search(req.topic)
+        web_context = "\n\n".join(results)
+
+    user_content = req.topic if not web_context else f"Topic: {req.topic}\n\nWeb search context:\n{web_context}"
+
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(
             GROQ_URL,
@@ -32,7 +45,7 @@ async def generate_cards(req: GenerateRequest, user=Depends(get_current_user)):
                 "model": "llama-3.1-8b-instant",
                 "messages": [
                     {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": req.topic},
+                    {"role": "user", "content": user_content},
                 ],
                 "response_format": {"type": "json_object"},
             },
