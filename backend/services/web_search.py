@@ -1,14 +1,15 @@
 import os
 import httpx
 
-TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY")
+SERPAPI_KEY = os.environ.get("SERPAPI_KEY")
 
 
 async def web_search(query: str, max_results: int = 5) -> list[str]:
     async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.post(
-            "https://api.tavily.com/search",
-            json={"api_key": TAVILY_API_KEY, "query": query, "max_results": max_results},
+        resp = await client.get(
+            "https://serpapi.com/search",
+            params={"q": query, "api_key": SERPAPI_KEY, "engine": "google", "num": max_results},
         )
     data = resp.json()
-    return [r["content"] for r in data.get("results", [])]
+    organic = data.get("organic_results", [])
+    return [r.get("snippet", "") for r in organic if r.get("snippet")]
