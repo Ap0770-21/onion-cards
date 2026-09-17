@@ -11,14 +11,13 @@ PAYSTACK_BASE = "https://api.paystack.co"
 
 @router.post("/checkout")
 async def create_checkout(user=Depends(require_user)):
-    """Initializes a Paystack transaction for the paid tier and returns the authorization URL."""
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             f"{PAYSTACK_BASE}/transaction/initialize",
             headers={"Authorization": f"Bearer {PAYSTACK_SECRET_KEY}"},
             json={
                 "email": user.email,
-                "amount": 500 * 100,  # e.g. ₦500/month in kobo — adjust to real price
+                "amount": 250000,  # ₦2500.00 in kobo
                 "metadata": {"user_id": user.id},
             },
         )
