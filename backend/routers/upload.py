@@ -45,7 +45,7 @@ async def generate_from_doc(topic: str = Form(...), user=Depends(require_active_
             GROQ_URL,
             headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
             json={
-                "model": "llama-3.1-8b-instant",
+                "model": "openai/gpt-oss-20b",
                 "messages": [
                     {"role": "system", "content": RAG_SYSTEM_PROMPT},
                     {"role": "user", "content": f"Topic: {topic}\n\nSource passages:\n{context}"},

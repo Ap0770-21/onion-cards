@@ -42,7 +42,7 @@ async def generate_cards(req: GenerateRequest, user=Depends(get_current_user)):
             GROQ_URL,
             headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
             json={
-                "model": "llama-3.1-8b-instant",
+                "model": "openai/gpt-oss-20b",
                 "messages": [
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": user_content},

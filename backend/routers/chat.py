@@ -46,7 +46,7 @@ async def chat_with_deck(req: ChatRequest, user=Depends(require_active_subscript
             GROQ_URL,
             headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
             json={
-                "model": "llama-3.1-8b-instant",
+                "model": "openai/gpt-oss-20b",
                 "messages": [
                     {"role": "system", "content": "Answer using only the flashcard context provided. If the context doesn't cover the question, say so."},
                     {"role": "user", "content": f"Flashcard context:\n{context}\n\nQuestion: {req.message}"},
