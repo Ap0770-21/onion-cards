@@ -30,7 +30,6 @@ class GenerateRequest(BaseModel):
 async def generate_cards(req: GenerateRequest, user=Depends(get_current_user)):
     web_context = ""
     if req.use_web_search:
-        # Premium-gated: require an active subscription for this path only
         require_active_subscription(user=user)
         results = await web_search(req.topic)
         web_context = "\n\n".join(results)
@@ -50,10 +49,11 @@ async def generate_cards(req: GenerateRequest, user=Depends(get_current_user)):
                 "response_format": {"type": "json_object"},
             },
         )
+
     groq_response = resp.json()
-if "choices" not in groq_response:
-    raise HTTPException(status_code=502, detail=f"Groq error: {groq_response}")
-raw = groq_response["choices"][0]["message"]["content"]
+    if "choices" not in groq_response:
+        raise HTTPException(status_code=502, detail=f"Groq error: {groq_response}")
+    raw = groq_response["choices"][0]["message"]["content"]
     parsed = json.loads(raw)
 
     batch_id = None
