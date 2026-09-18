@@ -1,7 +1,7 @@
 import os
 import json
 import httpx
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from routers.auth import get_current_user
 from routers.billing import require_active_subscription
@@ -50,7 +50,10 @@ async def generate_cards(req: GenerateRequest, user=Depends(get_current_user)):
                 "response_format": {"type": "json_object"},
             },
         )
-    raw = resp.json()["choices"][0]["message"]["content"]
+    groq_response = resp.json()
+if "choices" not in groq_response:
+    raise HTTPException(status_code=502, detail=f"Groq error: {groq_response}")
+raw = groq_response["choices"][0]["message"]["content"]
     parsed = json.loads(raw)
 
     batch_id = None
