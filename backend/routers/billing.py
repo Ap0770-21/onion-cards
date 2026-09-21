@@ -18,7 +18,8 @@ async def create_checkout(user=Depends(require_user)):
             headers={"Authorization": f"Bearer {PAYSTACK_SECRET_KEY}"},
             json={
                 "email": user.email,
-                "amount": 250000,  # ₦2500.00 in kobo
+                "amount": 250000,
+                "callback_url": "https://onion.cards/subscription/callback",
                 "metadata": {"user_id": user.id},
             },
         )
@@ -26,7 +27,6 @@ async def create_checkout(user=Depends(require_user)):
     if not data.get("status"):
         raise HTTPException(status_code=502, detail="Could not start checkout")
     return {"authorization_url": data["data"]["authorization_url"]}
-
 
 @router.post("/webhook")
 async def paystack_webhook(request: Request):
@@ -82,3 +82,21 @@ def get_subscription_status(user=Depends(require_user)):
         end = datetime.fromisoformat(sub["current_period_end"].replace("Z", "+00:00"))
         has_access = end > datetime.now(timezone.utc)
     return {**sub, "has_access": has_access}
+
+
+@router.get("/verify/{reference}")
+async def verify_transaction(reference: str, user=Depends(require_user)):
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{PAYSTACK_BASE}/transaction/verify/{reference}",
+            headers={"Authorization": f"Bearer {PAYSTACK_SECRET_KEY}"},
+        )
+    data = resp.json()
+    if data["data"]["status"] == "success":
+        supabase.table("subscriptions").upsert({
+            "user_id": user.id,
+            "status": "active",
+            "paystack_customer_code": data["data"]["customer"]["customer_code"],
+        }).execute()
+        return {"status": "active"}
+    return {"status": data["data"]["status"]}
