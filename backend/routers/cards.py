@@ -33,3 +33,17 @@ def update_card(card_id: str, update: CardUpdate, user=Depends(require_user)):
     if not result.data:
         raise HTTPException(status_code=404, detail="Card not found")
     return result.data[0]
+
+
+@router.delete("/batch/{batch_id}")
+def delete_batch(batch_id: str, user=Depends(require_user)):
+    result = (
+        supabase.table("generation_batches")
+        .delete()
+        .eq("id", batch_id)
+        .eq("user_id", user.id)  # ensures users can only delete their own decks
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Deck not found")
+    return {"deleted": True, "batch_id": batch_id}
