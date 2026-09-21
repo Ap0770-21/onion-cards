@@ -3,6 +3,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from supabase_client import supabase
 from routers.auth import require_user
+from datetime import datetime, timezone
 
 router = APIRouter()
 PAYSTACK_SECRET_KEY = os.environ.get("PAYSTACK_SECRET_KEY")
@@ -50,14 +51,34 @@ async def paystack_webhook(request: Request):
 
 
 def require_active_subscription(user=Depends(require_user)):
-    """Dependency for paid-tier routes (upload, generate-from-doc)."""
     result = (
         supabase.table("subscriptions")
-        .select("status")
+        .select("status, current_period_end")
         .eq("user_id", user.id)
-        .eq("status", "active")
         .execute()
     )
     if not result.data:
-        raise HTTPException(status_code=402, detail="Upload requires an active subscription")
-    return user
+        raise HTTPException(status_code=402, detail="Subscription required")
+
+    sub = result.data[0]
+    if sub["status"] == "active":
+        return user
+    if sub["status"] == "trial" and sub["current_period_end"]:
+        end = datetime.fromisoformat(sub["current_period_end"].replace("Z", "+00:00"))
+        if end > datetime.now(timezone.utc):
+            return user
+
+    raise HTTPException(status_code=402, detail="Subscription required — trial ended or inactive")
+
+
+@router.get("/status")
+def get_subscription_status(user=Depends(require_user)):
+    result = supabase.table("subscriptions").select("status, current_period_end").eq("user_id", user.id).execute()
+    if not result.data:
+        return {"status": "inactive", "has_access": False}
+    sub = result.data[0]
+    has_access = sub["status"] == "active"
+    if sub["status"] == "trial" and sub["current_period_end"]:
+        end = datetime.fromisoformat(sub["current_period_end"].replace("Z", "+00:00"))
+        has_access = end > datetime.now(timezone.utc)
+    return {**sub, "has_access": has_access}
