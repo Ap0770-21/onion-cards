@@ -11,7 +11,10 @@ async def embed_text(text: str, input_type: str = "search_document") -> list[flo
             headers={"Authorization": f"Bearer {COHERE_API_KEY}"},
             json={"texts": [text], "model": "embed-english-v3.0", "input_type": input_type},
         )
-    return resp.json()["embeddings"][0]
+    data = resp.json()
+    if "embeddings" not in data:
+        raise RuntimeError(f"Cohere embed error (text): {data}")
+    return data["embeddings"][0]
 
 
 async def embed_batch(texts: list[str], input_type: str = "search_document") -> list[list[float]]:
@@ -21,4 +24,7 @@ async def embed_batch(texts: list[str], input_type: str = "search_document") -> 
             headers={"Authorization": f"Bearer {COHERE_API_KEY}"},
             json={"texts": texts, "model": "embed-english-v3.0", "input_type": input_type},
         )
-    return resp.json()["embeddings"]
+    data = resp.json()
+    if "embeddings" not in data:
+        raise RuntimeError(f"Cohere embed error (batch): {data}")
+    return data["embeddings"]

@@ -48,7 +48,7 @@ async def chat_with_deck(req: ChatRequest, user=Depends(require_active_subscript
             json={
                 "model": "openai/gpt-oss-20b",
                 "messages": [
-                    {"role": "system", "content": "Answer using only the flashcard context provided. If the context doesn't cover the question, say so."},
+                    {"role": "system", "content": "You're helping a student understand their flashcard deck more deeply. Use the flashcard context below as the starting point, but feel free to explain concepts further, give examples, and draw on general knowledge to make things clearer — the way a tutor would, not a strict lookup tool."},
                     {"role": "user", "content": f"Flashcard context:\n{context}\n\nQuestion: {req.message}"},
                 ],
             },
