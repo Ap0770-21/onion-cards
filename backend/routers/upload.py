@@ -15,7 +15,7 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 RAG_SYSTEM_PROMPT = """You generate study flashcards STRICTLY grounded in the provided
 source passages. Return STRICT JSON only:
 {"overview": "...", "cards": [{"question": "...", "answer": "..."}, ...]}
-Only use facts present in the passages. Generate 8-12 cards."""
+Only use facts present in the passages. Generate 20 cards."""
 
 
 @router.post("/document")
@@ -25,6 +25,8 @@ async def upload_document(file: UploadFile = File(...), user=Depends(require_act
 
     chunks = chunk_text(text)
     embeddings = await embed_batch(chunks)
+    if not chunks:
+        raise HTTPException(status_code=422, detail="No readable text found in this document. Scanned/image-based PDFs aren't supported yet — try a text-based PDF or a .txt file.")
 
     rows = [
         {"user_id": user.id, "document_name": file.filename, "content": c, "embedding": e}
