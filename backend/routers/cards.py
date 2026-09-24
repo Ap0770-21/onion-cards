@@ -1,3 +1,4 @@
+import secrets
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from routers.auth import require_user
@@ -47,3 +48,20 @@ def delete_batch(batch_id: str, user=Depends(require_user)):
     if not result.data:
         raise HTTPException(status_code=404, detail="Deck not found")
     return {"deleted": True, "batch_id": batch_id}
+
+
+@router.post("/batch/{batch_id}/share")
+def enable_share(batch_id: str, user=Depends(require_user)):
+    result = supabase.table("generation_batches").select("share_token").eq("id", batch_id).eq("user_id", user.id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Deck not found")
+
+    token = result.data[0]["share_token"] or secrets.token_urlsafe(12)
+    supabase.table("generation_batches").update({"share_token": token, "share_enabled": True}).eq("id", batch_id).execute()
+    return {"share_url": f"https://onion.cards/shared/{token}"}
+
+
+@router.delete("/batch/{batch_id}/share")
+def disable_share(batch_id: str, user=Depends(require_user)):
+    supabase.table("generation_batches").update({"share_enabled": False}).eq("id", batch_id).eq("user_id", user.id).execute()
+    return {"share_enabled": False}
