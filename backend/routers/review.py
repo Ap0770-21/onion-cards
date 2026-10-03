@@ -14,20 +14,18 @@ def today_lagos() -> str:
 
 
 @router.get("/queue")
-def get_queue(limit: int = 40, user=Depends(require_user)):
+def get_queue(limit: int = 40, batch_id: str | None = None, user=Depends(require_user)):
     now = datetime.now(timezone.utc).isoformat()
-    result = (
+    query = (
         supabase.table("card_reviews")
-        .select("card_id, due_at, ease, cards(question, answer, batch_id)")
+        .select("card_id, due_at, ease, cards!inner(question, answer, batch_id)")
         .eq("user_id", user.id)
         .lte("due_at", now)
-        .order("due_at")
-        .order("ease")
-        .limit(limit)
-        .execute()
     )
+    if batch_id:
+        query = query.eq("cards.batch_id", batch_id)
+    result = query.order("due_at").order("ease").limit(limit).execute()
     return result.data
-
 
 class AnswerRequest(BaseModel):
     card_id: str
