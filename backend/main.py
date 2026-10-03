@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from routers import auth, generate, upload, cards, billing, chat, shared
+from routers import auth, generate, upload, cards, billing, chat, shared, review
 
 load_dotenv()
 
@@ -24,6 +24,7 @@ app.include_router(cards.router, prefix="/cards", tags=["cards"])
 app.include_router(billing.router, prefix="/billing", tags=["billing"])
 app.include_router(chat.router, prefix="/chat", tags=["chat"])
 app.include_router(shared.router, prefix="/shared", tags=["shared"])
+app.include_router(review.router, prefix="/review", tags=["review"])
 
 
 @app.get("/health")
