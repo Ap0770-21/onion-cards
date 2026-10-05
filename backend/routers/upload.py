@@ -3,7 +3,7 @@ import json
 import httpx
 from fastapi import APIRouter, Depends, UploadFile, File, Form
 from routers.billing import require_active_subscription
-from services.chunking import chunk_text, extract_pdf_text
+from services.chunking import chunk_text, extract_pdf_text, extract_pptx_text
 from services.embeddings import embed_batch
 from services.retrieval import retrieve_relevant_chunks
 from supabase_client import supabase
@@ -15,13 +15,18 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 RAG_SYSTEM_PROMPT = """You generate study flashcards STRICTLY grounded in the provided
 source passages. Return STRICT JSON only:
 {"overview": "...", "cards": [{"question": "...", "answer": "..."}, ...]}
-Only use facts present in the passages. Generate 20 cards."""
+Only use facts present in the passages. Generate 50 cards."""
 
 
 @router.post("/document")
 async def upload_document(file: UploadFile = File(...), user=Depends(require_active_subscription)):
     raw_bytes = await file.read()
-    text = extract_pdf_text(raw_bytes) if file.filename.endswith(".pdf") else raw_bytes.decode("utf-8", errors="ignore")
+    if file.filename.endswith(".pdf"):
+        text = extract_pdf_text(raw_bytes)
+    elif file.filename.endswith(".pptx"):
+        text = extract_pptx_text(raw_bytes)
+    else:
+        text = raw_bytes.decode("utf-8", errors="ignore")
 
     chunks = chunk_text(text)
     embeddings = await embed_batch(chunks)
