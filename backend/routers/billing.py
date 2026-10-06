@@ -38,14 +38,16 @@ async def paystack_webhook(request: Request):
     event = payload.get("event")
 
     if event == "charge.success":
-        user_id = payload["data"]["metadata"]["user_id"]
-        supabase.table("subscriptions").upsert(
-            {
-                "user_id": user_id,
-                "status": "active",
-                "paystack_customer_code": payload["data"]["customer"]["customer_code"],
-            }
-        ).execute()
+    user_id = payload["data"]["metadata"]["user_id"]
+    plan = payload["data"]["metadata"].get("plan", "active")
+    update_payload = {
+        "user_id": user_id,
+        "status": "founder" if plan == "founder" else "active",
+        "paystack_customer_code": payload["data"]["customer"]["customer_code"],
+    }
+    if plan == "founder":
+        update_payload["is_founder"] = True
+    supabase.table("subscriptions").upsert(update_payload).execute()
 
     return {"received": True}
 
@@ -99,4 +101,26 @@ async def verify_transaction(reference: str, user=Depends(require_user)):
             "paystack_customer_code": data["data"]["customer"]["customer_code"],
         }).execute()
         return {"status": "active"}
+    return {"status": data["data"]["status"]}
+
+
+@router.get("/verify/{reference}")
+async def verify_transaction(reference: str, user=Depends(require_user)):
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{PAYSTACK_BASE}/transaction/verify/{reference}",
+            headers={"Authorization": f"Bearer {PAYSTACK_SECRET_KEY}"},
+        )
+    data = resp.json()
+    if data["data"]["status"] == "success":
+        plan = data["data"]["metadata"].get("plan", "active")
+        update_payload = {
+            "user_id": user.id,
+            "status": "founder" if plan == "founder" else "active",
+            "paystack_customer_code": data["data"]["customer"]["customer_code"],
+        }
+        if plan == "founder":
+            update_payload["is_founder"] = True
+        supabase.table("subscriptions").upsert(update_payload).execute()
+        return {"status": update_payload["status"]}
     return {"status": data["data"]["status"]}
