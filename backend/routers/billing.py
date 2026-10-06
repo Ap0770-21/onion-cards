@@ -38,16 +38,16 @@ async def paystack_webhook(request: Request):
     event = payload.get("event")
 
     if event == "charge.success":
-    user_id = payload["data"]["metadata"]["user_id"]
-    plan = payload["data"]["metadata"].get("plan", "active")
-    update_payload = {
-        "user_id": user_id,
-        "status": "founder" if plan == "founder" else "active",
-        "paystack_customer_code": payload["data"]["customer"]["customer_code"],
-    }
-    if plan == "founder":
-        update_payload["is_founder"] = True
-    supabase.table("subscriptions").upsert(update_payload).execute()
+        user_id = payload["data"]["metadata"]["user_id"]
+        plan = payload["data"]["metadata"].get("plan", "active")
+        update_payload = {
+            "user_id": user_id,
+            "status": "founder" if plan == "founder" else "active",
+            "paystack_customer_code": payload["data"]["customer"]["customer_code"],
+        }
+        if plan == "founder":
+            update_payload["is_founder"] = True
+        supabase.table("subscriptions").upsert(update_payload).execute()
 
     return {"received": True}
 
